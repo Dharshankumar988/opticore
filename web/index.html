@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiCore Device Client</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>OptiCore Device Client</h1>
+            <div class="status-bar">
+                <span id="connection-status" class="status-indicator disconnected">Server: Disconnected</span>
+                <span id="camera-status" class="status-indicator disconnected">Camera: Offline</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Overview Section -->
+            <section class="card" id="overview">
+                <h2>Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <label>Stream FPS</label>
+                        <span id="stat-fps">0</span>
+                    </div>
+                    <div class="stat">
+                        <label>Frames Sent</label>
+                        <span id="stat-frames-sent">0</span>
+                    </div>
+                    <div class="stat">
+                        <label>Dropped Frames</label>
+                        <span id="stat-dropped">0</span>
+                    </div>
+                    <div class="stat">
+                        <label>Latency</label>
+                        <span id="stat-latency">--</span>
+                    </div>
+                </div>
+                <div id="recent-errors" class="error-log"></div>
+            </section>
+
+            <!-- Camera Section -->
+            <section class="card" id="camera">
+                <h2>Camera</h2>
+                <div class="camera-controls">
+                    <div class="control-group">
+                        <label for="camera-select">Camera:</label>
+                        <select id="camera-select">
+                            <option value="0">Camera 0</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="resolution-select">Resolution:</label>
+                        <select id="resolution-select">
+                            <option value="640x480">640x480</option>
+                            <option value="1280x720">1280x720</option>
+                            <option value="1920x1080">1920x1080</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="fps-select">FPS:</label>
+                        <input type="number" id="fps-select" value="10" min="1" max="30">
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button id="btn-start" class="btn btn-primary">Start Streaming</button>
+                    <button id="btn-stop" class="btn btn-secondary" disabled>Stop</button>
+                </div>
+                <div class="preview-container">
+                    <canvas id="camera-preview" width="640" height="480"></canvas>
+                    <p id="preview-status">Camera preview will appear here</p>
+                </div>
+            </section>
+
+            <!-- Inference Section -->
+            <section class="card" id="inference">
+                <h2>Inference Results</h2>
+                <div id="inference-results">
+                    <p class="placeholder">No results received yet</p>
+                </div>
+                <div class="detection-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Confidence</th>
+                                <th>Track ID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detection-body">
+                            <tr><td colspan="3">No detections</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="ocr-section">
+                    <h3>Latest OCR Text</h3>
+                    <p id="ocr-text">No OCR text</p>
+                </div>
+            </section>
+
+            <!-- Bluetooth/Audio Section -->
+            <section class="card" id="audio">
+                <h2>Audio Output</h2>
+                <div class="audio-info">
+                    <p><strong>Current Device:</strong> <span id="current-audio-device">Default</span></p>
+                    <p><strong>Bluetooth Available:</strong> <span id="bluetooth-status">Checking...</span></p>
+                </div>
+                <div class="button-group">
+                    <button id="btn-test-speech" class="btn btn-secondary">Test Speech</button>
+                    <button id="btn-refresh-devices" class="btn btn-secondary">Refresh Devices</button>
+                </div>
+                <div class="instructions">
+                    <h3>Bluetooth Pairing Instructions</h3>
+                    <pre id="pairing-instructions">Loading...</pre>
+                </div>
+            </section>
+
+            <!-- Voice Section -->
+            <section class="card" id="voice">
+                <h2>Voice Settings</h2>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="tts-enabled" checked>
+                        Enable TTS
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label for="tts-rate">Speech Rate:</label>
+                    <input type="range" id="tts-rate" min="100" max="300" value="175">
+                    <span id="tts-rate-value">175</span>
+                </div>
+                <div class="control-group">
+                    <label for="tts-volume">Volume:</label>
+                    <input type="range" id="tts-volume" min="0" max="100" value="80">
+                    <span id="tts-volume-value">80%</span>
+                </div>
+                <div class="control-group">
+                    <label for="alert-verbosity">Alert Verbosity:</label>
+                    <select id="alert-verbosity">
+                        <option value="minimal">Minimal</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="verbose">Verbose</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button id="btn-mute" class="btn btn-secondary">Mute / Stop</button>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section class="card" id="settings">
+                <h2>Settings</h2>
+                <div class="control-group">
+                    <label for="server-url">Server URL:</label>
+                    <input type="text" id="server-url" placeholder="https://your-server.ngrok-free.dev">
+                </div>
+                <div class="button-group">
+                    <button id="btn-test-connection" class="btn btn-secondary">Test Connection</button>
+                    <button id="btn-save-config" class="btn btn-primary">Save Configuration</button>
+                </div>
+                <div id="connection-test-result"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
