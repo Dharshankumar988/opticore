@@ -100,3 +100,5 @@ TTS_ENABLED=true
 ## License
 
 MIT License
+
+© 2026 Team Opticore. All Rights Reserved.
