@@ -40,11 +40,19 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "Installation complete!" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Before starting the application:" -ForegroundColor Yellow
-Write-Host "1. Edit .env and set OPTICORE_SERVER_URL to your actual server URL" -ForegroundColor Yellow
-Write-Host "2. On Windows, pair Bluetooth devices through Settings > Devices" -ForegroundColor Yellow
-Write-Host "3. Ensure your camera is connected and accessible" -ForegroundColor Yellow
+Write-Host "⚠️  IMPORTANT: Please edit .env and set OPTICORE_SERVER_URL" -ForegroundColor Red
+Write-Host "   Find your server URL from your Kaggle/ngrok session." -ForegroundColor Red
 Write-Host ""
 Write-Host "To start the application, run:" -ForegroundColor Green
 Write-Host "  .\start.ps1" -ForegroundColor Green
+Write-Host ""
+Write-Host "==========================================" -ForegroundColor Cyan
+Write-Host "Quick Reference" -ForegroundColor Cyan
+Write-Host "==========================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "To start:   .\start.ps1" -ForegroundColor Green
+Write-Host "To stop:    .\stop.ps1" -ForegroundColor Green
+Write-Host "Dashboard:  http://127.0.0.1:5050" -ForegroundColor Green
+Write-Host ""
+Write-Host "TTS Service: Uses Windows SAPI5 (built-in voices)" -ForegroundColor Yellow
 Write-Host ""

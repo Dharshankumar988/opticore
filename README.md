@@ -70,7 +70,13 @@ TTS_ENABLED=true
 - Python 3.8+
 - Camera (webcam or built-in)
 - Linux: eSpeak for TTS (`sudo apt-get install espeak`)
-- Windows: No extra dependencies
+- Windows: No extra dependencies (uses built-in SAPI5)
+
+## TTS Services Used
+
+- **Linux**: eSpeak/espeak-ng (install with `sudo apt-get install espeak`)
+- **Windows**: SAPI5 (built-in Windows speech synthesis)
+- Both are offline and work without internet connection
 
 ## Features
 
