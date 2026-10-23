@@ -107,6 +107,7 @@ Write-Host "Note: This does not remove:" -ForegroundColor Yellow
 Write-Host "  - Python packages installed globally" -ForegroundColor Yellow
 Write-Host "  - Windows system components" -ForegroundColor Yellow
 Write-Host ""
+$currentDir = Split-Path -Leaf (Get-Location)
 Write-Host "To completely remove this directory, run:" -ForegroundColor Yellow
-Write-Host "  cd .. ; Remove-Item -Recurse -Force opticore-vision" -ForegroundColor Yellow
+Write-Host "  cd .. ; Remove-Item -Recurse -Force $currentDir" -ForegroundColor Yellow
 Write-Host ""

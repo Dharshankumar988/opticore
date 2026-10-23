@@ -113,6 +113,7 @@ echo ""
 echo "To remove these system packages, run:"
 echo "  sudo apt-get remove espeak pulseaudio bluez"
 echo ""
+CURRENT_DIR=$(basename "$(pwd)")
 echo "To completely remove this directory, run:"
-echo "  cd .. && rm -rf opticore-vision"
+echo "  cd .. && rm -rf $CURRENT_DIR"
 echo ""
