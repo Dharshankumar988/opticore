@@ -5,6 +5,7 @@ import threading
 import queue
 import logging
 import time
+import platform
 from typing import Optional
 import pyttsx3
 
@@ -18,6 +19,7 @@ class TTSService:
         self.enabled = enabled
         self.rate = rate
         self.volume = volume
+        self.system = platform.system()
         
         self.engine: Optional[pyttsx3.Engine] = None
         self.speech_queue: queue.Queue = queue.Queue()
@@ -34,9 +36,12 @@ class TTSService:
             self.engine = pyttsx3.init()
             self.engine.setProperty('rate', self.rate)
             self.engine.setProperty('volume', self.volume)
+            logger.info(f"TTS engine initialized successfully")
             return True
         except Exception as e:
             logger.error(f"Failed to initialize TTS: {e}")
+            logger.error("On Linux, ensure eSpeak is installed: sudo apt-get install espeak")
+            logger.error("On Windows, ensure audio drivers are properly installed")
             return False
     
     def start(self):
@@ -189,5 +194,7 @@ class TTSService:
             'currently_speaking': self.currently_speaking,
             'queue_size': self.speech_queue.qsize(),
             'rate': self.rate,
-            'volume': self.volume
+            'volume': self.volume,
+            'system': self.system,
+            'engine_available': self.engine is not None
         }

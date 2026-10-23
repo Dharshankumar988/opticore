@@ -46,25 +46,13 @@ class BluetoothService:
                 Write-Output "$($d.Id)|$($d.Name)"
             }
             '''
-            # Simplified: use pyaudio or sounddevice if available
-            try:
-                import sounddevice as sd
-                for i, device in enumerate(sd.query_devices()):
-                    if device['max_output_channels'] > 0:
-                        devices.append({
-                            'id': str(i),
-                            'name': device['name'],
-                            'type': 'audio',
-                            'is_bluetooth': 'bluetooth' in device['name'].lower()
-                        })
-            except ImportError:
-                # Fallback: list known device info
-                devices.append({
-                    'id': 'default',
-                    'name': 'Default System Audio',
-                    'type': 'audio',
-                    'is_bluetooth': False
-                })
+            # Simplified: fallback to default device
+            devices.append({
+                'id': 'default',
+                'name': 'Default System Audio',
+                'type': 'audio',
+                'is_bluetooth': False
+            })
         except Exception as e:
             logger.error(f"Windows audio discovery error: {e}")
             devices.append({
@@ -80,7 +68,7 @@ class BluetoothService:
         """Discover audio devices on Linux using PulseAudio/PipeWire."""
         devices = []
         try:
-            # Try using pactl (PulseAudio)
+            # Try using pactl (PulseAudio/PipeWire)
             result = subprocess.run(
                 ['pactl', 'list', 'sinks'],
                 capture_output=True,
@@ -100,8 +88,32 @@ class BluetoothService:
                         current_device['is_bluetooth'] = 'bluetooth' in current_device['name'].lower()
                         devices.append(current_device)
                         current_device = None
+            else:
+                logger.warning(f"pactl returned non-zero exit code: {result.returncode}")
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-            logger.warning(f"PulseAudio not available: {e}")
+            logger.warning(f"PulseAudio/PipeWire not available: {e}")
+            logger.info("Install with: sudo apt-get install pulseaudio (or pipewire-pulse)")
+        
+        # Try pipewire-cli as fallback
+        if not devices:
+            try:
+                result = subprocess.run(
+                    ['pw-cli', 'list-objects', 'Node'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    logger.info("PipeWire detected")
+                    # Parse pipewire output (simplified)
+                    devices.append({
+                        'id': 'pipewire-default',
+                        'name': 'PipeWire Default Audio',
+                        'type': 'audio',
+                        'is_bluetooth': False
+                    })
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                logger.info("PipeWire CLI not available")
         
         if not devices:
             # Fallback
@@ -142,11 +154,10 @@ class BluetoothService:
         """Get currently selected audio output device."""
         try:
             if self.system == 'Windows':
-                import sounddevice as sd
-                default_device = sd.query_devices(kind='output')
+                # Return default device info
                 return {
-                    'id': str(default_device['index']),
-                    'name': default_device['name'],
+                    'id': 'default',
+                    'name': 'Default System Audio',
                     'type': 'audio'
                 }
             elif self.system == 'Linux':
@@ -181,13 +192,28 @@ class BluetoothService:
                 )
                 return 'RUNNING' in result.stdout
             elif self.system == 'Linux':
-                # Check for bluetoothctl
+                # Check for bluetoothctl (BlueZ)
                 result = subprocess.run(
                     ['which', 'bluetoothctl'],
                     capture_output=True,
                     timeout=5
                 )
-                return result.returncode == 0
+                if result.returncode == 0:
+                    # Verify bluetoothd is running
+                    result2 = subprocess.run(
+                        ['systemctl', 'is-active', 'bluetooth'],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    return result2.returncode == 0 and 'active' in result2.stdout
+                return False
+        except subprocess.TimeoutExpired:
+            logger.warning("Bluetooth check timed out")
+            return False
+        except FileNotFoundError:
+            logger.info("Bluetooth tools not found")
+            return False
         except Exception as e:
             logger.error(f"Error checking Bluetooth availability: {e}")
         

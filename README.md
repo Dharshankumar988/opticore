@@ -85,6 +85,20 @@ Note: Groq is completely optional. The application runs fully without it. When e
 - Linux: eSpeak for TTS (`sudo apt-get install espeak`)
 - Windows: No extra dependencies (uses built-in SAPI5)
 
+## Platform-Specific Notes
+
+### Windows ARM64 (Surface Pro X, etc.)
+On Windows ARM64, numpy and opencv-python may require compilation. If installation fails:
+1. Install Visual Studio Build Tools for ARM64 from Microsoft
+2. Or use a pre-built wheel if available
+3. Alternatively, run on x86_64 Windows or Linux/Raspberry Pi
+
+### Linux/Raspberry Pi
+Most dependencies install without issues. Ensure:
+- Camera permissions: `sudo usermod -a -G video $USER` (then log out and back in)
+- Audio: PulseAudio or PipeWire installed
+- Bluetooth: BlueZ installed and running
+
 ## TTS Services Used
 
 - **Linux**: eSpeak/espeak-ng (install with `sudo apt-get install espeak`)
@@ -96,19 +110,60 @@ Note: Groq is completely optional. The application runs fully without it. When e
 - Continuous camera streaming
 - Real-time object detection and OCR
 - Text-to-speech alerts
-- Web dashboard
+- Web dashboard with dark graphite theme
 - Bluetooth audio support
-- Auto-reconnection
+- Auto-reconnection with exponential backoff
+- Frame dropping to maintain responsiveness
+- Optional Groq AI for natural-language summaries
 
 ## Troubleshooting
 
-**Camera not found:** Try different CAMERA_INDEX values (0, 1, 2)
+**Camera not found:**
+- Try different CAMERA_INDEX values (0, 1, 2)
+- On Linux: Check permissions with `ls -l /dev/video*`
+- Ensure camera is not in use by another application
+- Check if camera opens with `v4l2-ctl --list-devices` (Linux)
 
-**Server connection failed:** Check OPTICORE_SERVER_URL matches your current ngrok URL
+**Server connection failed:**
+- Check OPTICORE_SERVER_URL matches your current ngrok URL
+- Test connection using the "Test Connection" button in dashboard
+- Ensure server is running and accessible
+- Check firewall settings
 
-**TTS not working:** Install eSpeak on Linux (`sudo apt-get install espeak`)
+**TTS not working:**
+- Linux: Install eSpeak (`sudo apt-get install espeak`)
+- Windows: Ensure audio drivers are installed
+- Check system audio output is not muted
 
-**Port in use:** Run stop script first, or change PORT in .env
+**Bluetooth not detected:**
+- Linux: Ensure bluetoothd is running (`systemctl status bluetooth`)
+- Linux: Install BlueZ tools (`sudo apt-get install bluez`)
+- Windows: Ensure Bluetooth service is running (`sc query bthserv`)
+
+**Dashboard shows unstyled HTML:**
+- Ensure Flask is serving static files correctly
+- Check browser console for errors
+- Clear browser cache
+
+**Port in use:**
+- Run stop script first, or change PORT in .env
+- Kill existing process: `taskkill /F /PID <pid>` (Windows) or `kill <pid>` (Linux)
+
+**Installation fails on Windows ARM64:**
+- Install Visual Studio Build Tools for ARM64
+- Or use x86_64 Windows environment
+- See "Platform-Specific Notes" above
+
+## Architecture
+
+- **app.py**: Main Flask application and API routes
+- **camera.py**: Camera discovery, capture, and frame encoding
+- **server_client.py**: WebSocket client for video streaming and event handling
+- **tts_service.py**: Text-to-speech with queue and throttling
+- **bluetooth_service.py**: Audio device discovery and routing
+- **alert_manager.py**: Alert prioritization and deduplication
+- **groq_service.py**: Optional AI summaries (non-blocking)
+- **web/**: Frontend dashboard (HTML/CSS/JS)
 
 ## License
 

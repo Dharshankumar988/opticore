@@ -9,14 +9,15 @@ websockets>=12.0
 aiohttp>=3.9.0
 
 # Computer Vision
+# Note: On Windows ARM64, may need: pip install opencv-python-headless
 opencv-python>=4.8.0
-numpy>=1.24.0
+numpy>=1.24.0,<2.0.0
 
 # Text-to-Speech
 pyttsx3>=2.90
 
 # Audio Device Discovery (optional, for better device listing)
-sounddevice>=0.4.6
+# sounddevice>=0.4.6  # Commented out - may have compatibility issues
 
 # Configuration
 python-dotenv>=1.0.0

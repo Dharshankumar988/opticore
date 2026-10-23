@@ -94,7 +94,15 @@ class ServerClient:
             import aiohttp
             async with aiohttp.ClientSession() as session:
                 async with session.get(health_url, timeout=self.timeout) as response:
-                    return response.status == 200
+                    if response.status == 200:
+                        logger.info(f"Server health check passed: {health_url}")
+                        return True
+                    else:
+                        logger.warning(f"Server health check failed with status {response.status}")
+                        return False
+        except asyncio.TimeoutError:
+            logger.error(f"Health check timed out after {self.timeout}s")
+            return False
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return False

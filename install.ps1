@@ -33,7 +33,23 @@ python -m pip install --upgrade pip
 
 # Install dependencies
 Write-Host "Installing dependencies..." -ForegroundColor Yellow
-pip install -r requirements.txt
+try {
+    pip install -r requirements.txt
+    Write-Host "Dependencies installed successfully" -ForegroundColor Green
+} catch {
+    Write-Host "⚠️  Some dependencies may have failed to install" -ForegroundColor Yellow
+    Write-Host "This is common on Windows ARM64 - see README.md for details" -ForegroundColor Yellow
+}
+
+# Check for Bluetooth service
+Write-Host ""
+Write-Host "Checking system dependencies..."
+$btService = Get-Service -Name bthserv -ErrorAction SilentlyContinue
+if ($btService -and $btService.Status -eq 'Running') {
+    Write-Host "✓ Bluetooth service is running" -ForegroundColor Green
+} else {
+    Write-Host "⚠️  Bluetooth service not running" -ForegroundColor Yellow
+}
 
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Cyan
@@ -55,4 +71,5 @@ Write-Host "To stop:    .\stop.ps1" -ForegroundColor Green
 Write-Host "Dashboard:  http://127.0.0.1:5050" -ForegroundColor Green
 Write-Host ""
 Write-Host "TTS Service: Uses Windows SAPI5 (built-in voices)" -ForegroundColor Yellow
+Write-Host "Note: On Windows ARM64, some packages may require Visual Studio Build Tools" -ForegroundColor Yellow
 Write-Host ""

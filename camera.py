@@ -29,6 +29,9 @@ class CameraService:
         self.dropped_frames = 0
         self.last_frame_time = 0
         self.actual_fps = 0
+        self.last_error: Optional[str] = None
+        self.consecutive_errors = 0
+        self.frame_callback = None  # Callback to send frames to server
         
     @staticmethod
     def discover_cameras(max_index: int = 10) -> List[Tuple[int, str]]:
@@ -48,18 +51,30 @@ class CameraService:
         if self.running:
             return True
         
+        self.last_error = None
+        self.consecutive_errors = 0
+        
         if self.video_file:
             self.cap = cv2.VideoCapture(self.video_file)
         else:
             self.cap = cv2.VideoCapture(self.camera_index)
         
         if not self.cap or not self.cap.isOpened():
+            self.last_error = f"Failed to open camera {self.camera_index}"
             return False
         
         # Set camera properties
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.cap.set(cv2.CAP_PROP_FPS, self.fps)
+        
+        # Verify camera is actually capturing by reading a test frame
+        ret, test_frame = self.cap.read()
+        if not ret or test_frame is None:
+            self.cap.release()
+            self.cap = None
+            self.last_error = "Camera opened but failed to read test frame"
+            return False
         
         self.running = True
         self.capture_thread = threading.Thread(target=self._capture_loop, daemon=True)
@@ -90,8 +105,15 @@ class CameraService:
             
             ret, frame = self.cap.read()
             if not ret:
+                self.consecutive_errors += 1
+                if self.consecutive_errors > 10:
+                    self.last_error = f"Failed to read frame after {self.consecutive_errors} attempts"
+                    logger.error(self.last_error)
                 time.sleep(0.1)
                 continue
+            
+            # Reset error counter on successful read
+            self.consecutive_errors = 0
             
             # Calculate actual FPS
             self.last_frame_time = current_time
@@ -104,17 +126,26 @@ class CameraService:
             
             if success:
                 self.frame_count += 1
+                frame_bytes = encoded.tobytes()
+                
                 # Prefer newest frame - drop if queue is full
                 try:
-                    self.frame_queue.put_nowait(encoded.tobytes())
+                    self.frame_queue.put_nowait(frame_bytes)
                 except queue.Full:
                     self.dropped_frames += 1
                     # Remove oldest and add newest
                     try:
                         self.frame_queue.get_nowait()
-                        self.frame_queue.put_nowait(encoded.tobytes())
+                        self.frame_queue.put_nowait(frame_bytes)
                     except queue.Empty:
                         pass
+                
+                # Send frame to server via callback
+                if self.frame_callback:
+                    try:
+                        self.frame_callback(frame_bytes)
+                    except Exception as e:
+                        logger.error(f"Frame callback error: {e}")
             
             last_capture_time = current_time
     
@@ -141,5 +172,11 @@ class CameraService:
             'actual_fps': self.actual_fps,
             'target_fps': self.fps,
             'camera_index': self.camera_index,
-            'resolution': f"{self.width}x{self.height}"
+            'resolution': f"{self.width}x{self.height}",
+            'last_error': self.last_error,
+            'consecutive_errors': self.consecutive_errors
         }
+    
+    def set_frame_callback(self, callback):
+        """Set callback function to receive frames (for server streaming)."""
+        self.frame_callback = callback

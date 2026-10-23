@@ -253,13 +253,17 @@ function setupEventListeners() {
             });
             const data = await response.json();
             if (data.status === 'started') {
-                elements.previewStatus.textContent = 'Streaming...';
+                elements.previewStatus.style.display = 'none';
+                elements.cameraPreview.style.display = 'block';
+                elements.cameraPreview.src = '/video_feed';
             } else {
                 elements.previewStatus.textContent = 'Failed to start: ' + (data.error || 'Unknown error');
+                elements.previewStatus.style.display = 'block';
             }
         } catch (error) {
             console.error('Failed to start streaming:', error);
             elements.previewStatus.textContent = 'Failed to start: ' + error.message;
+            elements.previewStatus.style.display = 'block';
         }
     });
     
@@ -268,7 +272,10 @@ function setupEventListeners() {
         try {
             const response = await fetch(`${API_BASE}/api/stop`, { method: 'POST' });
             await response.json();
+            elements.cameraPreview.style.display = 'none';
+            elements.cameraPreview.src = '';
             elements.previewStatus.textContent = 'Camera preview will appear here';
+            elements.previewStatus.style.display = 'block';
         } catch (error) {
             console.error('Failed to stop streaming:', error);
         }

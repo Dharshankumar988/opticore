@@ -53,6 +53,9 @@ class OptiCoreApp:
             video_file=self.config.VIDEO_FILE_PATH
         )
         
+        # Set frame callback to send frames to server
+        self.camera.set_frame_callback(self._send_frame_to_server)
+        
         self.server_client = ServerClient(
             server_url=self.config.OPTICORE_SERVER_URL,
             client_id=self.config.OPTICORE_CLIENT_ID,
@@ -116,6 +119,37 @@ class OptiCoreApp:
         @self.flask_app.route('/')
         def index():
             return render_template('index.html')
+        
+        # Serve static files explicitly from web folder
+        @self.flask_app.route('/style.css')
+        def serve_css():
+            return self.flask_app.send_static_file('style.css')
+        
+        @self.flask_app.route('/app.js')
+        def serve_js():
+            return self.flask_app.send_static_file('app.js')
+        
+        @self.flask_app.route('/video_feed')
+        def video_feed():
+            """Video streaming route for browser preview."""
+            def generate():
+                while self.streaming:
+                    frame = self.camera.get_frame()
+                    if frame:
+                        yield (b'--frame\r\n'
+                               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                    else:
+                        # If no frame, wait a bit
+                        import time
+                        time.sleep(0.1)
+                # Send empty frame when stopped
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + b'' + b'\r\n')
+            
+            return self.flask_app.response_class(
+                generate(),
+                mimetype='multipart/x-mixed-replace; boundary=frame'
+            )
         
         @self.flask_app.route('/api/status')
         def get_status():
@@ -330,6 +364,11 @@ class OptiCoreApp:
     def _handle_connection_status(self, component: str, status: str):
         """Handle connection status updates."""
         logger.info(f"Connection status: {component} -> {status}")
+    
+    def _send_frame_to_server(self, frame_bytes: bytes):
+        """Send frame to server via WebSocket (non-blocking)."""
+        if self.streaming and self.server_client:
+            self.server_client.send_frame(frame_bytes)
     
     def _async_loop_runner(self):
         """Run async event loop in background thread."""
