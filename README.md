@@ -51,6 +51,19 @@ STREAM_FPS=10
 TTS_ENABLED=true
 ```
 
+**Groq AI (Optional - for natural-language scene summaries):**
+```
+GROQ_ENABLED=false
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=openai/gpt-oss-20b
+GROQ_TIMEOUT_SECONDS=5
+GROQ_MAX_TOKENS=150
+GROQ_COOLDOWN_SECONDS=30
+GROQ_MAX_INPUT_TOKENS=500
+```
+
+Note: Groq is completely optional. The application runs fully without it. When enabled, it provides brief natural-language summaries of detected scenes. Get an API key at https://console.groq.com/
+
 ## Usage
 
 - Open dashboard at http://127.0.0.1:5050

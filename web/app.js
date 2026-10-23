@@ -37,6 +37,11 @@ const elements = {
     ttsVolumeValue: document.getElementById('tts-volume-value'),
     alertVerbosity: document.getElementById('alert-verbosity'),
     btnMute: document.getElementById('btn-mute'),
+    groqEnabled: document.getElementById('groq-enabled'),
+    groqStatus: document.getElementById('groq-status'),
+    groqModel: document.getElementById('groq-model'),
+    btnTestGroq: document.getElementById('btn-test-groq'),
+    groqTestResult: document.getElementById('groq-test-result'),
     serverUrl: document.getElementById('server-url'),
     btnTestConnection: document.getElementById('btn-test-connection'),
     btnSaveConfig: document.getElementById('btn-save-config'),
@@ -130,7 +135,9 @@ function getPairingInstructions() {
 // Start status updates
 function startStatusUpdates() {
     updateStatus();
+    updateGroqStatus();
     statusInterval = setInterval(updateStatus, 1000);
+    setInterval(updateGroqStatus, 5000); // Update Groq status less frequently
 }
 
 // Update status
@@ -174,6 +181,36 @@ async function updateStatus() {
         
     } catch (error) {
         console.error('Failed to update status:', error);
+    }
+}
+
+// Update Groq status
+async function updateGroqStatus() {
+    try {
+        const response = await fetch(`${API_BASE}/api/groq/status`);
+        const status = await response.json();
+        
+        elements.groqEnabled.checked = status.enabled;
+        
+        if (status.enabled) {
+            if (status.available) {
+                elements.groqStatus.textContent = 'Available';
+                elements.groqStatus.className = 'status-indicator connected';
+            } else if (status.configured) {
+                elements.groqStatus.textContent = 'Configured (unavailable)';
+                elements.groqStatus.className = 'status-indicator disconnected';
+            } else {
+                elements.groqStatus.textContent = 'Not configured';
+                elements.groqStatus.className = 'status-indicator disconnected';
+            }
+            elements.groqModel.textContent = status.model || '--';
+        } else {
+            elements.groqStatus.textContent = 'Disabled';
+            elements.groqStatus.className = 'status-indicator disconnected';
+            elements.groqModel.textContent = '--';
+        }
+    } catch (error) {
+        console.error('Failed to update Groq status:', error);
     }
 }
 
@@ -311,6 +348,29 @@ function setupEventListeners() {
         } catch (error) {
             console.error('Failed to save config:', error);
             alert('Failed to save configuration');
+        }
+    });
+    
+    // Test Groq connection
+    elements.btnTestGroq.addEventListener('click', async () => {
+        elements.groqTestResult.style.display = 'none';
+        elements.groqTestResult.textContent = 'Testing...';
+        elements.groqTestResult.style.display = 'block';
+        
+        try {
+            const response = await fetch(`${API_BASE}/api/groq/test`, { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                elements.groqTestResult.textContent = `Connection successful! Latency: ${data.latency_ms}ms`;
+                elements.groqTestResult.className = 'success';
+            } else {
+                elements.groqTestResult.textContent = 'Connection failed: ' + (data.error || 'Unknown error');
+                elements.groqTestResult.className = 'error';
+            }
+        } catch (error) {
+            elements.groqTestResult.textContent = 'Connection failed: ' + error.message;
+            elements.groqTestResult.className = 'error';
         }
     });
 }

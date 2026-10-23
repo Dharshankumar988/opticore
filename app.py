@@ -19,6 +19,7 @@ from server_client import ServerClient, InferenceEvent
 from tts_service import TTSService
 from bluetooth_service import BluetoothService
 from alert_manager import AlertManager
+from groq_service import GroqService, GroqConfig
 
 # Configure logging
 logging.basicConfig(
@@ -71,6 +72,26 @@ class OptiCoreApp:
             cooldown_seconds=self.config.ALERT_COOLDOWN_SECONDS,
             verbosity=self.config.ALERT_VERBOSITY
         )
+        
+        # Initialize Groq service (optional, non-blocking)
+        self.groq = None
+        if self.config.GROQ_ENABLED:
+            try:
+                self.groq = GroqService(GroqConfig(
+                    enabled=self.config.GROQ_ENABLED,
+                    api_key=self.config.GROQ_API_KEY,
+                    model=self.config.GROQ_MODEL,
+                    timeout_seconds=self.config.GROQ_TIMEOUT_SECONDS,
+                    max_tokens=self.config.GROQ_MAX_TOKENS,
+                    cooldown_seconds=self.config.GROQ_COOLDOWN_SECONDS,
+                    max_input_tokens=self.config.GROQ_MAX_INPUT_TOKENS
+                ))
+                if self.config.GROQ_API_KEY:
+                    logger.info("Groq service initialized")
+                else:
+                    logger.warning("Groq enabled but no API key provided - service will be unavailable")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Groq service: {e}")
         
         # State
         self.streaming = False
@@ -192,6 +213,25 @@ class OptiCoreApp:
                 healthy = await self.server_client.check_health()
                 return jsonify({'healthy': healthy})
             return jsonify({'healthy': False, 'error': 'Async loop not ready'})
+        
+        @self.flask_app.route('/api/groq/test', methods=['POST'])
+        async def test_groq():
+            """Test Groq connection and model availability."""
+            if not self.groq:
+                return jsonify({'success': False, 'error': 'Groq service not initialized'})
+            
+            if not self.async_loop:
+                return jsonify({'success': False, 'error': 'Async loop not ready'})
+            
+            result = await self.groq.test_connection()
+            return jsonify(result)
+        
+        @self.flask_app.route('/api/groq/status')
+        def get_groq_status():
+            """Get Groq service status."""
+            if self.groq:
+                return jsonify(self.groq.get_status())
+            return jsonify({'enabled': False, 'available': False})
     
     def _get_status(self) -> dict:
         """Get current application status."""
@@ -200,6 +240,7 @@ class OptiCoreApp:
         tts_stats = self.tts.get_stats()
         bluetooth_status = self.bluetooth.get_status()
         alert_stats = self.alert_manager.get_stats()
+        groq_stats = self.groq.get_status() if self.groq else {'enabled': False, 'available': False}
         
         latest_result = None
         if self.latest_event:
@@ -226,6 +267,7 @@ class OptiCoreApp:
             'tts': tts_stats,
             'bluetooth': bluetooth_status,
             'alerts': alert_stats,
+            'groq': groq_stats,
             'latest_result': latest_result
         }
     
@@ -248,6 +290,42 @@ class OptiCoreApp:
             message = self.alert_manager.add_ocr_alert(ocr.text, ocr.confidence)
             if message:
                 self.tts.speak(message)
+        
+        # Optional: Generate Groq summary (non-blocking, fire-and-forget)
+        if self.groq and self.async_loop:
+            asyncio.run_coroutine_threadsafe(
+                self._generate_groq_summary_async(event),
+                self.async_loop
+            )
+    
+    async def _generate_groq_summary_async(self, event: InferenceEvent):
+        """Generate Groq summary asynchronously (non-blocking)."""
+        if not self.groq:
+            return
+        
+        try:
+            # Convert detections to dict format
+            detections = [
+                {
+                    'class_name': d.class_name,
+                    'confidence': d.confidence,
+                    'track_id': d.track_id
+                }
+                for d in event.detections
+            ]
+            
+            # Convert OCR to dict format
+            ocr_results = [
+                {'text': o.text, 'confidence': o.confidence}
+                for o in event.ocr_results
+            ]
+            
+            # Generate summary (fire-and-forget, errors logged but don't crash)
+            summary = await self.groq.generate_summary(detections, ocr_results)
+            if summary:
+                logger.debug(f"Groq summary: {summary}")
+        except Exception as e:
+            logger.warning(f"Groq summary generation failed: {e}")
     
     def _handle_connection_status(self, component: str, status: str):
         """Handle connection status updates."""

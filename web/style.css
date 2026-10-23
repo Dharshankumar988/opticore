@@ -281,6 +281,29 @@ main {
     font-size: 0.85rem;
 }
 
+.groq-status p {
+    margin-bottom: 10px;
+}
+
+#groq-test-result {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 6px;
+    display: none;
+}
+
+#groq-test-result.success {
+    background: #d1fae5;
+    color: #065f46;
+    display: block;
+}
+
+#groq-test-result.error {
+    background: #fee2e2;
+    color: #991b1b;
+    display: block;
+}
+
 .placeholder {
     color: var(--text-secondary);
     font-style: italic;

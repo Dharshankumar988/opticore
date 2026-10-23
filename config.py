@@ -92,7 +92,23 @@ class Config:
     
     @property
     def GROQ_MODEL(self) -> str:
-        return os.getenv('GROQ_MODEL', 'llama3-8b-8192')
+        return os.getenv('GROQ_MODEL', 'openai/gpt-oss-20b')
+    
+    @property
+    def GROQ_TIMEOUT_SECONDS(self) -> int:
+        return int(os.getenv('GROQ_TIMEOUT_SECONDS', '5'))
+    
+    @property
+    def GROQ_MAX_TOKENS(self) -> int:
+        return int(os.getenv('GROQ_MAX_TOKENS', '150'))
+    
+    @property
+    def GROQ_COOLDOWN_SECONDS(self) -> int:
+        return int(os.getenv('GROQ_COOLDOWN_SECONDS', '30'))
+    
+    @property
+    def GROQ_MAX_INPUT_TOKENS(self) -> int:
+        return int(os.getenv('GROQ_MAX_INPUT_TOKENS', '500'))
     
     # WebSocket Configuration
     @property
@@ -119,8 +135,8 @@ class Config:
         if not self.OPTICORE_SERVER_URL or self.OPTICORE_SERVER_URL == 'https://your-ngrok-url.ngrok-free.dev':
             errors.append("OPTICORE_SERVER_URL must be set to your actual server URL")
         
-        if self.GROQ_ENABLED and not self.GROQ_API_KEY:
-            errors.append("GROQ_API_KEY is required when GROQ_ENABLED is true")
+        # Groq validation is non-fatal - warn in logs but don't block startup
+        # Groq is optional; if misconfigured, the app will log a warning and continue
         
         return errors
 

@@ -49,31 +49,39 @@ def test_config_from_env():
 
 def test_config_validation():
     """Test configuration validation."""
-    config = Config()
-    
     # Missing server URL should produce error
-    config.OPTICORE_SERVER_URL = 'https://your-ngrok-url.ngrok-free.dev'
+    os.environ['OPTICORE_SERVER_URL'] = 'https://your-ngrok-url.ngrok-free.dev'
+    config = Config()
     errors = config.validate()
     assert len(errors) > 0
     assert 'OPTICORE_SERVER_URL' in errors[0]
     
     # Valid server URL should not produce error
-    config.OPTICORE_SERVER_URL = 'https://real-server.example.com'
+    os.environ['OPTICORE_SERVER_URL'] = 'https://real-server.example.com'
+    config = Config()
     errors = config.validate()
     assert not any('OPTICORE_SERVER_URL' in e for e in errors)
+    
+    # Cleanup
+    del os.environ['OPTICORE_SERVER_URL']
 
 
 def test_groq_validation():
     """Test Groq configuration validation."""
+    # Groq validation is non-fatal - should not block startup
+    # Groq enabled without API key should NOT produce error (it's optional)
+    os.environ['GROQ_ENABLED'] = 'true'
+    os.environ['GROQ_API_KEY'] = ''
     config = Config()
-    
-    # Groq enabled without API key should produce error
-    config.GROQ_ENABLED = True
-    config.GROQ_API_KEY = None
-    errors = config.validate()
-    assert any('GROQ_API_KEY' in e for e in errors)
-    
-    # Groq enabled with API key should not produce error
-    config.GROQ_API_KEY = 'test-key'
     errors = config.validate()
     assert not any('GROQ_API_KEY' in e for e in errors)
+    
+    # Groq enabled with API key should also not produce error
+    os.environ['GROQ_API_KEY'] = 'test-key'
+    config = Config()
+    errors = config.validate()
+    assert not any('GROQ_API_KEY' in e for e in errors)
+    
+    # Cleanup
+    del os.environ['GROQ_ENABLED']
+    del os.environ['GROQ_API_KEY']
